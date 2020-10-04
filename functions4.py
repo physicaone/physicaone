@@ -236,6 +236,15 @@ def flatten_list(list0):
     flattened = [val for sublist in list0 for val in sublist]
     return flattened
 
+def Ising_preprocessing(data):
+    data=np.array(data).transpose()
+    data=data[3]
+    data_=[]
+    for i in range(len(data)):
+        data_.append(flatten_list(data[i]))
+    return np.array(data_)
+    
+    
 def get_logbin(x,y):
     bins = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
     list00=get_state(x,y)
