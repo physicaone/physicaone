@@ -93,7 +93,7 @@ def energy(config):
     L = int(np.sqrt(config.size))
     config=np.reshape(config,(L,L))
     E = 0
-    L = len(config)
+#     L = len(config)
     for i in range(L):
         for j in range(L):
             s = config[i,j]
@@ -181,6 +181,14 @@ def Ising_preprocessing(data):
         data_.append(flatten_list(data[i]))
     return np.array(data_)
     
+def mean_std(Ising):
+    listtmp=[]
+    for i in range(len(Ising)):
+        listtmp.append(energy(Ising[i]))
+    Emean=np.mean(listtmp)
+    Estd=np.std(listtmp)
+#     print('Emean={Emean} | Estd={Estd}'.format(Emean=Emean, Estd=Estd))
+    return Emean, Estd
     
 def get_logbin(x,y):
     bins = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
@@ -345,7 +353,7 @@ def train(model, train_loader, n_epochs, lr, momentum):
 
     # optimizer
     train_op = optim.SGD(model.parameters(), 0, 0)
-    model.to(device)
+#     model
     # train the RBM model
     model.train()
     
@@ -354,9 +362,7 @@ def train(model, train_loader, n_epochs, lr, momentum):
     loss0=[]
     for _, (data) in enumerate(train_loader):
 #         v, v_gibbs = model(data.view(-1, 784))
-        v, v_gibbs = model(data.view(-1, 400))
-        v=v.to(device)
-        v_gibbs=v_gibbs.to(device)
+        v, v_gibbs = model(data.view(-1, 64))
         loss = model.free_energy(v) - model.free_energy(v_gibbs)
 
         loss0.append(loss.item())
@@ -386,9 +392,7 @@ def train(model, train_loader, n_epochs, lr, momentum):
         v_generated=[]
         E_generated=[]
         for _, (data) in enumerate(train_loader):
-            v, v_gibbs = model(data.view(-1, 400))
-            v=v.to(device)
-            v_gibbs=v_gibbs.to(device)
+            v, v_gibbs = model(data.view(-1, 64))
             loss = model.free_energy(v) - model.free_energy(v_gibbs)
             loss_.append(loss.item())
             train_op.zero_grad()
@@ -407,10 +411,11 @@ def train(model, train_loader, n_epochs, lr, momentum):
 #         data1=list(torch.flatten(param.data))
 #         listparam.append(data1)
 
-        if listloss[-1]*listloss[-2] <= 0:
-            sign_changed+=1
-            print('sign changed:%d'%(sign_changed))
-        if sign_changed > 3 and np.abs(listloss[-1])<0.1:
+#         if listloss[-1]*listloss[-2] <= 0:
+#             sign_changed+=1
+#             print('sign changed:%d'%(sign_changed))
+#         if sign_changed > 3 and np.abs(listloss[-1])<0.1:
+        if np.abs(listloss[-1])<0.1:
             print("Earlystopping : Loss<0.1")
             break
     end_epoch=epoch
@@ -464,7 +469,7 @@ def train_and_get_data_RBME(dataset, n_vis, n_hid, k, n_epochs, batch_size, lr, 
     datasetlist=list(dataset1)
     L=int(np.sqrt(n_vis))
     for i in range(len(datasetlist)):
-        label_energy.append(energy(np.array(list_to_param(datasetlist[i], L, L))))
+        label_energy.append(energy(np.array(datasetlist[i])))
     print('E origin | mean : %f | std : %f' %(np.mean(label_energy), np.std(label_energy)))
     Emean = np.mean(label_energy)
               
@@ -481,24 +486,20 @@ def train_and_get_data_RBME(dataset, n_vis, n_hid, k, n_epochs, batch_size, lr, 
                 states_in_epoch.append(str(list0[i][j].tolist()))
     print(end_epoch)
     
-    for e in range(end_epoch+1):
-        a, b = get_listmk(states_in_epoch[int(e*batch_size*len(list0)/(end_epoch+1)):int((e+1)*batch_size*len(list0)/(end_epoch+1))])
-        listmkx.append(a)
-        listmky.append(b)
-        listHs.append(get_H_s(a,b))
-        listHk.append(get_H_k(a,b))
+#     for e in range(end_epoch+1):
+#         a, b = get_listmk(states_in_epoch[int(e*batch_size*len(list0)/(end_epoch+1)):int((e+1)*batch_size*len(list0)/(end_epoch+1))])
+#         listmkx.append(a)
+#         listmky.append(b)
+#         listHs.append(get_H_s(a,b))
+#         listHk.append(get_H_k(a,b))
 
     a, b=get_listmk(states_in_epoch)
-    with open('data/%s_listmkx_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
-        pkl.dump(listmkx, f)
-    with open('data/%s_listmky_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
-        pkl.dump(listmky, f)
-    with open('data/%s_loss_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
-        pkl.dump(listloss, f)
-    with open('data/%s_listHs_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
-        pkl.dump(listHs, f)
-    with open('data/%s_listHk_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
-        pkl.dump(listHk, f)
+    with open('data/%s_mk_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
+        pkl.dump([a,b,listloss], f)
+#     with open('data/%s_Hs_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
+#         pkl.dump(listHs, f)
+#     with open('data/%s_Hk_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
+#         pkl.dump(listHk, f)
     with open('data/%s_generated_n_hid=%s_%s.pkl' %(str(datetime.today())[:10], n_hid, filename), 'wb') as f:
         pkl.dump(v_generated0, f)
         
